@@ -1,14 +1,19 @@
 import os
-from supabase import create_client, Client
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
 load_dotenv()
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./financer.db")
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise Exception("SUPABASE_URL e SUPABASE_KEY não estão configurados no .env")
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# Cria e exporta o cliente do Supabase
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

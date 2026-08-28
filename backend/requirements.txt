@@ -5,3 +5,6 @@ passlib[bcrypt]
 python-multipart
 python-dotenv
 supabase
+cryptography
+sqlalchemy
+psycopg2-binary

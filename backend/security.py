@@ -36,3 +36,23 @@ def create_access_token(data: dict) -> str:
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+# --- Criptografia Simétrica (Fernet) ---
+from cryptography.fernet import Fernet
+import base64
+import hashlib
+
+# Derivamos uma chave válida pro Fernet a partir do SECRET_KEY
+fernet_key_bytes = hashlib.sha256(SECRET_KEY.encode()).digest()
+fernet_key = base64.urlsafe_b64encode(fernet_key_bytes)
+fernet = Fernet(fernet_key)
+
+def encrypt_text(text: str) -> str:
+    if not text:
+        return text
+    return fernet.encrypt(text.encode('utf-8')).decode('utf-8')
+
+def decrypt_text(encrypted_text: str) -> str:
+    if not encrypted_text:
+        return encrypted_text
+    return fernet.decrypt(encrypted_text.encode('utf-8')).decode('utf-8')
