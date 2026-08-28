@@ -60,7 +60,7 @@ export async function loginAction(formData: FormData) {
     } else {
       return { error: 'Token não retornado pela API.' }
     }
-  } catch (error) {
+  } catch {
     return { error: 'Erro de conexão com o servidor.' }
   }
 

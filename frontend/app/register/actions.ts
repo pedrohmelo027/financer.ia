@@ -53,7 +53,7 @@ export async function registerAction(formData: FormData) {
     // Se a API retornar sucesso mas não fizer auto-login, apenas continuamos
     // const data = await response.json()
     
-  } catch (error) {
+  } catch {
     return { error: 'Erro de conexão com o servidor.' }
   }
 
