@@ -57,7 +57,7 @@ export default function DashboardPage() {
     }, {} as Record<string, number>);
     
   const pieData = Object.entries(expensesByCategory)
-    .map(([name, value]: [string, number]) => ({ name, value }))
+    .map(([name, value]) => ({ name, value: value as number }))
     .sort((a,b) => b.value - a.value);
     
   const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef'];
