@@ -218,7 +218,7 @@ export default function DashboardPage() {
                             ))}
                           </Pie>
                           <RechartsTooltip 
-                            formatter={(value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
+                            formatter={(value: any) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
                           />
                           <Legend verticalAlign="bottom" height={36}/>
                         </PieChart>
@@ -251,7 +251,7 @@ export default function DashboardPage() {
                             tickFormatter={(value) => `R$ ${value}`}
                           />
                           <RechartsTooltip 
-                            formatter={(value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
+                            formatter={(value: any) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
                             cursor={{ fill: '#f9fafb' }}
                           />
                           <Legend verticalAlign="top" height={36} />
