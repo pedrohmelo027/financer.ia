@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Sparkles, ArrowRight, CheckCircle2, ShieldCheck, BrainCircuit, X, PlusCircle } from 'lucide-react'
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
 import { getDashboardData } from './actions'
 
 export default function DashboardPage() {
@@ -46,6 +47,37 @@ export default function DashboardPage() {
   const saldo = transactions.reduce((acc, t) => acc + (t.type === 'INCOME' ? t.amount : -t.amount), 0)
   const receitas = transactions.filter(t => t.type === 'INCOME').reduce((acc, t) => acc + t.amount, 0)
   const despesas = transactions.filter(t => t.type === 'EXPENSE').reduce((acc, t) => acc + t.amount, 0)
+
+  // Gráficos - Dados
+  const expensesByCategory = transactions
+    .filter(t => t.type === 'EXPENSE')
+    .reduce((acc, t) => {
+      acc[t.category] = (acc[t.category] || 0) + t.amount;
+      return acc;
+    }, {} as Record<string, number>);
+    
+  const pieData = Object.entries(expensesByCategory)
+    .map(([name, value]) => ({ name, value }))
+    .sort((a,b) => b.value - a.value);
+    
+  const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef'];
+
+  const transactionsByDate = [...transactions]
+    .sort((a, b) => new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime())
+    .reduce((acc, t) => {
+      // Pega apenas o dia e mês para ficar curto no gráfico (ex: "24/05")
+      const dateObj = new Date(t.transaction_date)
+      const date = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+      
+      if (!acc[date]) {
+        acc[date] = { name: date, Receitas: 0, Despesas: 0 };
+      }
+      if (t.type === 'INCOME') acc[date].Receitas += t.amount;
+      if (t.type === 'EXPENSE') acc[date].Despesas += t.amount;
+      return acc;
+    }, {} as Record<string, { name: string, Receitas: number, Despesas: number }>);
+    
+  const barData = Object.values(transactionsByDate);
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -163,8 +195,79 @@ export default function DashboardPage() {
                 Adicionar Transação
               </Link>
             </div>
-          ) : (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mt-8">
+          ) : !loading ? (
+            <>
+              {/* Gráficos */}
+              <div className="grid md:grid-cols-2 gap-6 mt-8">
+                {/* Despesas por Categoria */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                  <h3 className="text-lg font-bold text-gray-900 mb-6">Despesas por Categoria</h3>
+                  {pieData.length > 0 ? (
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={pieData}
+                            innerRadius={60}
+                            outerRadius={80}
+                            paddingAngle={5}
+                            dataKey="value"
+                          >
+                            {pieData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip 
+                            formatter={(value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
+                          />
+                          <Legend verticalAlign="bottom" height={36}/>
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="h-64 flex items-center justify-center text-gray-500">Sem despesas registradas</div>
+                  )}
+                </div>
+
+                {/* Fluxo de Caixa (Barras) */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                  <h3 className="text-lg font-bold text-gray-900 mb-6">Fluxo de Caixa Mensal</h3>
+                  {barData.length > 0 ? (
+                    <div className="h-64 w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={barData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                          <XAxis 
+                            dataKey="name" 
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fill: '#6b7280', fontSize: 12 }}
+                            dy={10}
+                          />
+                          <YAxis 
+                            axisLine={false}
+                            tickLine={false}
+                            tick={{ fill: '#6b7280', fontSize: 12 }}
+                            tickFormatter={(value) => `R$ ${value}`}
+                          />
+                          <RechartsTooltip 
+                            formatter={(value: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value)}
+                            cursor={{ fill: '#f9fafb' }}
+                          />
+                          <Legend verticalAlign="top" height={36} />
+                          <Bar dataKey="Receitas" fill="#22c55e" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                          <Bar dataKey="Despesas" fill="#ef4444" radius={[4, 4, 0, 0]} maxBarSize={40} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  ) : (
+                    <div className="h-64 flex items-center justify-center text-gray-500">Sem dados para exibir</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Lista de Transações Recentes */}
+              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mt-8">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-bold text-gray-900">Suas Transações</h3>
                 <Link 
@@ -194,7 +297,8 @@ export default function DashboardPage() {
                 )}
               </div>
             </div>
-          )}
+            </>
+          ) : null}
         </>
       )}
 
