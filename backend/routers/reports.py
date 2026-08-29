@@ -1,5 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import extract
+from typing import Optional
 from database import get_db
 from models import User, Transaction, PaymentMethod
 from dependencies import get_current_user
@@ -9,14 +11,23 @@ router = APIRouter(prefix="/reports", tags=["reports"])
 
 @router.get("/summary", response_model=ReportSummaryResponse)
 def get_report_summary(
+    month: Optional[int] = Query(None, description="Mês (1-12)"),
+    year: Optional[int] = Query(None, description="Ano (ex: 2026)"),
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
     # 1. Fetch ALL payment methods strictly for the CURRENT USER
     user_methods = db.query(PaymentMethod).filter(PaymentMethod.user_id == current_user.id).all()
     
-    # 2. Fetch ALL transactions strictly for the CURRENT USER
-    transactions = db.query(Transaction).filter(Transaction.user_id == current_user.id).all()
+    # 2. Fetch transactions strictly for the CURRENT USER, with optional filters
+    query = db.query(Transaction).filter(Transaction.user_id == current_user.id)
+    
+    if year:
+        query = query.filter(extract('year', Transaction.transaction_date) == year)
+    if month:
+        query = query.filter(extract('month', Transaction.transaction_date) == month)
+        
+    transactions = query.all()
     
     total_incomes = 0.0
     total_expenses = 0.0
@@ -35,10 +46,19 @@ def get_report_summary(
         for method in user_methods
     }
     
+    # Calculate monthly summary
+    monthly_stats = {}
+    
     # Aggregate transactions
     for t in transactions:
         amount = float(t.amount)
         pm_id = t.payment_method_id
+        
+        # Monthly aggregation
+        # t.transaction_date is a date object
+        month_str = t.transaction_date.strftime("%m/%Y")
+        if month_str not in monthly_stats:
+            monthly_stats[month_str] = {"month": month_str, "total_incomes": 0.0, "total_expenses": 0.0}
         
         # Security fallback: only aggregate if the payment method actually belongs to this user
         if pm_id in pm_stats:
@@ -47,10 +67,12 @@ def get_report_summary(
                 total_incomes += amount
                 pm_stats[pm_id]["total_incomes"] += amount
                 pm_stats[pm_id]["incomes_count"] += 1
+                monthly_stats[month_str]["total_incomes"] += amount
             elif t_type == "EXPENSE" or t_type == "DESPESA":
                 total_expenses += amount
                 pm_stats[pm_id]["total_expenses"] += amount
                 pm_stats[pm_id]["expenses_count"] += 1
+                monthly_stats[month_str]["total_expenses"] += amount
             
     current_balance = total_incomes - total_expenses
     
@@ -69,11 +91,17 @@ def get_report_summary(
                 expenses_count=stats["expenses_count"]
             )
         )
+        
+    monthly_summary = list(monthly_stats.values())
+    # Sort monthly summary by date, assuming MM/YYYY format
+    # Simple sort for MM/YYYY: convert to YYYY/MM for sorting
+    monthly_summary.sort(key=lambda x: x["month"].split("/")[1] + x["month"].split("/")[0])
             
     return ReportSummaryResponse(
         total_incomes=total_incomes,
         total_expenses=total_expenses,
         current_balance=current_balance,
         transactions_count=len(transactions),
-        payment_methods_summary=payment_methods_summary
+        payment_methods_summary=payment_methods_summary,
+        monthly_summary=monthly_summary
     )

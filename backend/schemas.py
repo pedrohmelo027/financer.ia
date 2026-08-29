@@ -65,10 +65,16 @@ class PaymentMethodSummary(BaseModel):
     incomes_count: int
     expenses_count: int
 
+class MonthlySummary(BaseModel):
+    month: str
+    total_incomes: float
+    total_expenses: float
+
 class ReportSummaryResponse(BaseModel):
     total_incomes: float
     total_expenses: float
     current_balance: float
     transactions_count: int
     payment_methods_summary: List[PaymentMethodSummary]
+    monthly_summary: List[MonthlySummary]
 
