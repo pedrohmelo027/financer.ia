@@ -8,26 +8,25 @@ import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, ResponsiveCont
 import { getDashboardData } from './actions'
 
 export default function DashboardPage() {
-  const [showTutorial, setShowTutorial] = useState(true)
+  const [tutorialStep, setTutorialStep] = useState(0)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [transactions, setTransactions] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [successMsg, setSuccessMsg] = useState(false)
 
   useEffect(() => {
-    // Check URL for success param (doing it this way avoids Next.js Suspense warnings)
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search)
       if (params.get('success') === 'true') {
         setSuccessMsg(true)
-        window.history.replaceState({}, '', '/dashboard') // Remove o parâmetro da URL
-        setTimeout(() => setSuccessMsg(false), 5000) // Some depois de 5s
+        window.history.replaceState({}, '', '/dashboard')
+        setTimeout(() => setSuccessMsg(false), 5000)
       }
-    }
 
-    const tutorialSeen = sessionStorage.getItem('tutorial_seen')
-    if (tutorialSeen) {
-      setShowTutorial(false)
+      const tutorialSeen = localStorage.getItem('tutorial_completed')
+      if (!tutorialSeen) {
+        setTutorialStep(1)
+      }
     }
     
     // Fetch data
@@ -39,9 +38,17 @@ export default function DashboardPage() {
     })
   }, [])
 
-  function closeTutorial() {
-    setShowTutorial(false)
-    sessionStorage.setItem('tutorial_seen', 'true')
+  function skipTutorial() {
+    setTutorialStep(0)
+    localStorage.setItem('tutorial_completed', 'true')
+  }
+
+  function nextStep() {
+    if (tutorialStep === 4) {
+      skipTutorial()
+    } else {
+      setTutorialStep(s => s + 1)
+    }
   }
 
   // Cálculos básicos
@@ -99,67 +106,99 @@ export default function DashboardPage() {
         <h1 className="text-3xl font-bold text-gray-900">Visão Geral</h1>
       </div>
 
-      {showTutorial && (
-        <div className="bg-gradient-to-r from-gray-900 to-black text-white p-8 rounded-2xl shadow-lg relative overflow-hidden">
-          {/* Elementos decorativos de fundo */}
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 rounded-full bg-white opacity-5 blur-3xl"></div>
-          
-          <button 
-            onClick={closeTutorial}
-            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/10"
-          >
-            <X className="w-5 h-5" />
-          </button>
-
-          <div className="max-w-2xl relative z-10">
-            <div className="flex items-center gap-2 text-blue-400 font-medium mb-3">
-              <Sparkles className="w-5 h-5" />
-              <span>Bem-vindo ao seu Conselheiro Financeiro IA</span>
-            </div>
-            <h2 className="text-3xl font-bold mb-4">Como o Financer.ia funciona?</h2>
-            <p className="text-gray-300 text-lg mb-8 leading-relaxed">
-              Diferente de outros aplicativos, não vamos apenas mostrar gráficos. Nossa IA (Google Gemini) analisa seus gastos considerando seus <strong>hobbies</strong> e <strong>metas</strong> para sugerir cortes sem tirar o que você ama.
-            </p>
-            
-            <div className="grid sm:grid-cols-3 gap-6 mb-8">
-              <div>
-                <div className="bg-white/10 w-10 h-10 flex items-center justify-center rounded-lg mb-3">
-                  <CheckCircle2 className="w-5 h-5 text-green-400" />
-                </div>
-                <h3 className="font-semibold text-white mb-1">1. Registre</h3>
-                <p className="text-sm text-gray-400">Adicione suas despesas e receitas.</p>
-              </div>
-              <div>
-                <div className="bg-white/10 w-10 h-10 flex items-center justify-center rounded-lg mb-3">
-                  <ShieldCheck className="w-5 h-5 text-blue-400" />
-                </div>
-                <h3 className="font-semibold text-white mb-1">2. Privacidade</h3>
-                <p className="text-sm text-gray-400">Suas descrições são criptografadas (Fernet) antes de salvar.</p>
-              </div>
-              <div>
-                <div className="bg-white/10 w-10 h-10 flex items-center justify-center rounded-lg mb-3">
-                  <BrainCircuit className="w-5 h-5 text-purple-400" />
-                </div>
-                <h3 className="font-semibold text-white mb-1">3. Receba Dicas</h3>
-                <p className="text-sm text-gray-400">A IA cruza dados e te diz como atingir suas metas.</p>
-              </div>
-            </div>
-
-            <Link 
-              href="/dashboard/transactions/new"
-              className="inline-flex items-center gap-2 bg-white text-black px-6 py-3 rounded-xl font-medium hover:bg-gray-100 transition-colors"
+      {tutorialStep > 0 && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+          <div className="bg-white max-w-lg w-full rounded-3xl shadow-2xl overflow-hidden relative">
+            <button 
+              onClick={skipTutorial}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-2"
             >
-              Registrar primeira transação
-              <ArrowRight className="w-5 h-5" />
-            </Link>
+              <X className="w-5 h-5" />
+            </button>
+            
+            <div className="p-8">
+              {tutorialStep === 1 && (
+                <div className="text-center animate-in slide-in-from-right-4 duration-300">
+                  <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Sparkles className="w-8 h-8" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">Bem-vindo ao Financer.ia!</h2>
+                  <p className="text-gray-600 leading-relaxed">
+                    Mais que um aplicativo de finanças, um conselheiro IA. O Gemini analisa seus hábitos, 
+                    hobbies e metas para dar dicas reais de onde economizar sem cortar o que você ama.
+                  </p>
+                </div>
+              )}
+
+              {tutorialStep === 2 && (
+                <div className="text-center animate-in slide-in-from-right-4 duration-300">
+                  <div className="w-16 h-16 bg-purple-50 text-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <ShieldCheck className="w-8 h-8" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">1. Contas e Cartões</h2>
+                  <p className="text-gray-600 leading-relaxed">
+                    Comece acessando o menu &quot;Contas e Cartões&quot;. Cadastre seus bancos e vincule seus cartões 
+                    de crédito ou débito a eles para saber exatamente de onde seu dinheiro está saindo.
+                  </p>
+                </div>
+              )}
+
+              {tutorialStep === 3 && (
+                <div className="text-center animate-in slide-in-from-right-4 duration-300">
+                  <div className="w-16 h-16 bg-green-50 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <PlusCircle className="w-8 h-8" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">2. Transações e Privacidade</h2>
+                  <p className="text-gray-600 leading-relaxed">
+                    Sempre que gastar ou receber, adicione uma transação! Pode detalhar o motivo à vontade, 
+                    pois nós <strong>criptografamos</strong> todas as descrições no banco de dados para a sua privacidade.
+                  </p>
+                </div>
+              )}
+
+              {tutorialStep === 4 && (
+                <div className="text-center animate-in slide-in-from-right-4 duration-300">
+                  <div className="w-16 h-16 bg-orange-50 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <BrainCircuit className="w-8 h-8" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">3. Relatórios e Dicas</h2>
+                  <p className="text-gray-600 leading-relaxed">
+                    Depois de usar por um tempo, confira a aba de Relatórios! Nela você acompanha seus gastos por conta 
+                    e por categoria, e recebe as dicas valiosas da IA de onde otimizar seus custos.
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-10 flex items-center justify-between">
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4].map(step => (
+                    <div 
+                      key={step} 
+                      className={`h-2 rounded-full transition-all duration-300 ${tutorialStep === step ? 'w-8 bg-black' : 'w-2 bg-gray-200'}`}
+                    />
+                  ))}
+                </div>
+                
+                <div className="flex items-center gap-4">
+                  <button onClick={skipTutorial} className="text-sm font-medium text-gray-500 hover:text-gray-900">
+                    Pular
+                  </button>
+                  <button 
+                    onClick={nextStep}
+                    className="flex items-center gap-2 bg-black text-white px-6 py-2.5 rounded-xl font-medium hover:bg-gray-800 transition-colors"
+                  >
+                    {tutorialStep === 4 ? 'Começar' : 'Próximo'}
+                    {tutorialStep !== 4 && <ArrowRight className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
       {/* Gráficos / Resumo */}
-      {!showTutorial && (
-        <>
-          <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid md:grid-cols-3 gap-6">
             <div className="p-6 bg-white rounded-2xl shadow-sm border border-gray-100">
               <h3 className="text-sm font-medium text-gray-500 mb-2">Saldo Atual</h3>
               <p className="text-3xl font-bold text-gray-900">
@@ -300,9 +339,6 @@ export default function DashboardPage() {
             </div>
             </>
           ) : null}
-        </>
-      )}
-
     </div>
   )
 }
