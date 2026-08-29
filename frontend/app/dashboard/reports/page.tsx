@@ -12,11 +12,21 @@ interface Transaction {
   payment_method_id?: string;
 }
 
-interface PaymentMethod {
-  id: string;
-  name: string;
-  type: string;
-  bank?: string;
+interface ReportSummary {
+  total_incomes: number;
+  total_expenses: number;
+  current_balance: number;
+  transactions_count: number;
+  payment_methods_summary: {
+    method_id: string;
+    method_name: string;
+    method_type: string;
+    account_name: string;
+    total_incomes: number;
+    total_expenses: number;
+    incomes_count: number;
+    expenses_count: number;
+  }[];
 }
 
 // Utilizando Server Component para carregar dados direto no servidor
@@ -29,19 +39,19 @@ export default async function ReportsPage() {
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
-  // Busca paralela de Transações e Métodos de Pagamento
-  const [txRes, pmRes] = await Promise.all([
-    fetch(`${API_URL}/transactions/`, {
+  // Busca paralela de Resumo (novo endpoint) e Histórico de Transações
+  const [summaryRes, txRes] = await Promise.all([
+    fetch(`${API_URL}/reports/summary`, {
       headers: { 'Authorization': `Bearer ${token}` },
       cache: 'no-store'
     }),
-    fetch(`${API_URL}/payment-methods/`, {
+    fetch(`${API_URL}/transactions/`, {
       headers: { 'Authorization': `Bearer ${token}` },
       cache: 'no-store'
     })
   ])
 
-  if (!txRes.ok || !pmRes.ok) {
+  if (!summaryRes.ok || !txRes.ok) {
     return (
       <div className="p-8 text-center text-red-600">
         Ocorreu um erro ao carregar os dados. Tente novamente mais tarde.
@@ -49,45 +59,35 @@ export default async function ReportsPage() {
     )
   }
 
+  const summary: ReportSummary = await summaryRes.json()
   const transactions: Transaction[] = await txRes.json()
-  const paymentMethods: PaymentMethod[] = await pmRes.json()
 
-  // --- Cálculos ---
-  const receitas = transactions.filter(t => t.type === 'INCOME').reduce((acc, t) => acc + Number(t.amount || 0), 0)
-  const despesas = transactions.filter(t => t.type === 'EXPENSE').reduce((acc, t) => acc + Number(t.amount || 0), 0)
-  const saldo = receitas - despesas
-
-  // Mapa de formas de pagamento: ID -> Dados
+  // Mapa rápido apenas para exibir o nome do método no histórico de transações
   const methodMap = new Map()
-  paymentMethods.forEach(pm => {
-    methodMap.set(pm.id, {
-      name: pm.name,
-      type: pm.type,
-      incomeCount: 0,
-      expenseCount: 0,
-      incomeTotal: 0,
-      expenseTotal: 0
-    })
+  summary.payment_methods_summary.forEach(pm => {
+    methodMap.set(pm.method_id, pm.method_name)
   })
-
-  // Agrupar transações por método de pagamento
-  transactions.forEach(t => {
-    if (t.payment_method_id && methodMap.has(t.payment_method_id)) {
-      const pmData = methodMap.get(t.payment_method_id)
-      if (t.type === 'INCOME') {
-        pmData.incomeCount += 1
-        pmData.incomeTotal += t.amount
-      } else {
-        pmData.expenseCount += 1
-        pmData.expenseTotal += t.amount
-      }
-    }
-  })
-
-  // Array final de estatísticas por método
-  const methodStats = Array.from(methodMap.values())
 
   const formatCurrency = (val: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(val)
+
+  const accountsSummary = summary.payment_methods_summary.reduce((acc, pm) => {
+    if (!acc[pm.account_name]) {
+      acc[pm.account_name] = {
+        account_name: pm.account_name,
+        total_incomes: 0,
+        total_expenses: 0,
+        incomes_count: 0,
+        expenses_count: 0,
+      }
+    }
+    acc[pm.account_name].total_incomes += pm.total_incomes
+    acc[pm.account_name].total_expenses += pm.total_expenses
+    acc[pm.account_name].incomes_count += pm.incomes_count
+    acc[pm.account_name].expenses_count += pm.expenses_count
+    return acc
+  }, {} as Record<string, { account_name: string; total_incomes: number; total_expenses: number; incomes_count: number; expenses_count: number }>)
+  
+  const accountsList = Object.values(accountsSummary).sort((a, b) => b.total_expenses - a.total_expenses)
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -103,7 +103,7 @@ export default async function ReportsPage() {
           </div>
           <div>
             <h3 className="text-sm font-medium text-gray-500">Saldo Atual</h3>
-            <p className="text-2xl font-bold text-gray-900">{formatCurrency(saldo)}</p>
+            <p className="text-2xl font-bold text-gray-900">{formatCurrency(summary.current_balance)}</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
@@ -112,7 +112,7 @@ export default async function ReportsPage() {
           </div>
           <div>
             <h3 className="text-sm font-medium text-gray-500">Total de Receitas</h3>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(receitas)}</p>
+            <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.total_incomes)}</p>
           </div>
         </div>
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
@@ -121,9 +121,56 @@ export default async function ReportsPage() {
           </div>
           <div>
             <h3 className="text-sm font-medium text-gray-500">Total Gasto</h3>
-            <p className="text-2xl font-bold text-red-600">{formatCurrency(despesas)}</p>
+            <p className="text-2xl font-bold text-red-600">{formatCurrency(summary.total_expenses)}</p>
           </div>
         </div>
+      </div>
+
+      {/* Análise por Conta */}
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+        <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+          <Wallet className="w-5 h-5 text-gray-400" />
+          Análise por Conta
+        </h2>
+
+        {accountsList.length === 0 ? (
+          <p className="text-gray-500">Nenhuma conta com movimentações ainda.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-100 text-gray-500 text-sm">
+                  <th className="pb-3 font-medium px-4">Instituição / Conta</th>
+                  <th className="pb-3 font-medium px-4">Entradas (Qtd)</th>
+                  <th className="pb-3 font-medium px-4">Saídas (Qtd)</th>
+                  <th className="pb-3 font-medium px-4">Total Recebido</th>
+                  <th className="pb-3 font-medium px-4">Total Gasto</th>
+                </tr>
+              </thead>
+              <tbody className="text-gray-700 divide-y divide-gray-50">
+                {accountsList.map((acc, idx) => (
+                  <tr key={idx} className="hover:bg-gray-50 transition-colors">
+                    <td className="py-4 px-4">
+                      <div className="font-semibold text-gray-900">{acc.account_name}</div>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-50 text-green-700 text-sm font-bold">
+                        {acc.incomes_count}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4">
+                      <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-50 text-red-700 text-sm font-bold">
+                        {acc.expenses_count}
+                      </span>
+                    </td>
+                    <td className="py-4 px-4 font-medium text-green-600">{formatCurrency(acc.total_incomes)}</td>
+                    <td className="py-4 px-4 font-medium text-red-600">{formatCurrency(acc.total_expenses)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Uso por Método de Pagamento */}
@@ -133,14 +180,14 @@ export default async function ReportsPage() {
           Análise por Método de Pagamento
         </h2>
 
-        {methodStats.length === 0 ? (
+        {summary.payment_methods_summary.length === 0 ? (
           <p className="text-gray-500">Nenhum método de pagamento cadastrado ou utilizado ainda.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-gray-100 text-gray-500 text-sm">
-                  <th className="pb-3 font-medium px-4">Método / Banco</th>
+                  <th className="pb-3 font-medium px-4">Método / Cartão</th>
                   <th className="pb-3 font-medium px-4">Entradas (Qtd)</th>
                   <th className="pb-3 font-medium px-4">Saídas (Qtd)</th>
                   <th className="pb-3 font-medium px-4">Total Recebido</th>
@@ -148,24 +195,24 @@ export default async function ReportsPage() {
                 </tr>
               </thead>
               <tbody className="text-gray-700 divide-y divide-gray-50">
-                {methodStats.map((ms, idx) => (
+                {summary.payment_methods_summary.sort((a, b) => b.total_expenses - a.total_expenses).map((ms, idx) => (
                   <tr key={idx} className="hover:bg-gray-50 transition-colors">
                     <td className="py-4 px-4">
-                      <div className="font-semibold text-gray-900">{ms.name}</div>
-                      <div className="text-xs text-gray-500">{ms.type.replace('_', ' ')}</div>
+                      <div className="font-semibold text-gray-900">{ms.method_name}</div>
+                      <div className="text-xs text-gray-500">{ms.method_type.replace('_', ' ')} - {ms.account_name}</div>
                     </td>
                     <td className="py-4 px-4">
                       <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-green-50 text-green-700 text-sm font-bold">
-                        {ms.incomeCount}
+                        {ms.incomes_count}
                       </span>
                     </td>
                     <td className="py-4 px-4">
                       <span className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-red-50 text-red-700 text-sm font-bold">
-                        {ms.expenseCount}
+                        {ms.expenses_count}
                       </span>
                     </td>
-                    <td className="py-4 px-4 font-medium text-green-600">{formatCurrency(ms.incomeTotal)}</td>
-                    <td className="py-4 px-4 font-medium text-red-600">{formatCurrency(ms.expenseTotal)}</td>
+                    <td className="py-4 px-4 font-medium text-green-600">{formatCurrency(ms.total_incomes)}</td>
+                    <td className="py-4 px-4 font-medium text-red-600">{formatCurrency(ms.total_expenses)}</td>
                   </tr>
                 ))}
               </tbody>
