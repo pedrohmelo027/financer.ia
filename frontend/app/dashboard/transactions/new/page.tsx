@@ -4,12 +4,19 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, PlusCircle } from 'lucide-react'
 import { createTransactionAction } from './actions'
-import { getPaymentMethods } from '../../methods/actions'
+import { getPaymentMethods } from '../../accounts/actions'
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+  type: string;
+  bank?: string;
+}
 
 export default function NewTransactionPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [methods, setMethods] = useState<any[]>([])
+  const [methods, setMethods] = useState<PaymentMethod[]>([])
   
   const [type, setType] = useState('EXPENSE') // EXPENSE ou INCOME
 
@@ -143,7 +150,7 @@ export default function NewTransactionPage() {
               <option value="">Selecione... (Opcional)</option>
               {methods.map(m => (
                 <option key={m.id} value={m.id}>
-                  {m.name} {m.bank ? `(${m.bank})` : ''}
+                  {m.name}
                 </option>
               ))}
             </select>

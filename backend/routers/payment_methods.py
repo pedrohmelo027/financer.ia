@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 from database import get_db
-from models import User, PaymentMethod
+from models import User, PaymentMethod, Account
 from dependencies import get_current_user
 from schemas import PaymentMethodCreate, PaymentMethodResponse
 
@@ -14,11 +14,20 @@ def create_payment_method(
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
+    # Verify the account belongs to the current user
+    account = db.query(Account).filter(
+        Account.id == payment_method.account_id,
+        Account.user_id == current_user.id
+    ).first()
+    
+    if not account:
+        raise HTTPException(status_code=400, detail="Conta inválida ou não pertence ao usuário.")
+
     new_method = PaymentMethod(
         user_id=current_user.id,
+        account_id=payment_method.account_id,
         name=payment_method.name,
-        type=payment_method.type,
-        bank=payment_method.bank
+        type=payment_method.type
     )
     db.add(new_method)
     db.commit()

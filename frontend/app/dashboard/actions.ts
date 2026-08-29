@@ -30,3 +30,8 @@ export async function getDashboardData() {
     return { error: 'Erro de conexão' }
   }
 }
+
+export async function logoutAction() {
+  cookies().delete('access_token')
+  redirect('/login')
+}

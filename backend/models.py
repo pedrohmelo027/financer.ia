@@ -20,8 +20,21 @@ class User(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
 
+    accounts = relationship("Account", back_populates="user")
     payment_methods = relationship("PaymentMethod", back_populates="user")
     transactions = relationship("Transaction", back_populates="user")
+
+
+class Account(Base):
+    __tablename__ = "accounts"
+
+    id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    name = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="accounts")
+    payment_methods = relationship("PaymentMethod", back_populates="account")
 
 
 class PaymentMethod(Base):
@@ -29,12 +42,13 @@ class PaymentMethod(Base):
 
     id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False)
+    account_id = Column(Uuid(as_uuid=True), ForeignKey("accounts.id"), nullable=False)
     name = Column(String, nullable=False)
     type = Column(String, nullable=False)
-    bank = Column(String, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     user = relationship("User", back_populates="payment_methods")
+    account = relationship("Account", back_populates="payment_methods")
     transactions = relationship("Transaction", back_populates="payment_method")
 
 

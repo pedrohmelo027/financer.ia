@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { Wallet, PieChart, Sparkles, Plus, LogOut, LayoutDashboard } from 'lucide-react'
+import { Wallet, PieChart, Sparkles, Plus, LayoutDashboard } from 'lucide-react'
+import LogoutButton from './LogoutButton'
 
 export default function DashboardLayout({
   children,
@@ -24,26 +25,26 @@ export default function DashboardLayout({
             <LayoutDashboard className="w-5 h-5" />
             Visão Geral
           </Link>
+          <Link href="/dashboard/reports" className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium">
+            <PieChart className="w-5 h-5" />
+            Relatórios
+          </Link>
           <Link href="/dashboard/transactions/new" className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium">
             <Plus className="w-5 h-5" />
             Nova Transação
           </Link>
           <Link href="/dashboard/analysis" className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium">
-            <PieChart className="w-5 h-5" />
+            <Sparkles className="w-5 h-5" />
             Análise com IA
           </Link>
-          <Link href="/dashboard/methods" className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium">
+          <Link href="/dashboard/accounts" className="flex items-center gap-3 px-3 py-2 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium">
             <Wallet className="w-5 h-5" />
-            Formas de Pagamento
+            Contas e Cartões
           </Link>
         </nav>
         
         <div className="p-4 mt-auto">
-          {/* O logout deve limpar o cookie, em um sistema real chamaríamos uma Server Action */}
-          <Link href="/login" className="flex items-center gap-3 px-3 py-2 text-red-600 rounded-lg hover:bg-red-50 transition-colors font-medium w-full">
-            <LogOut className="w-5 h-5" />
-            Sair
-          </Link>
+          <LogoutButton />
         </div>
       </aside>
 

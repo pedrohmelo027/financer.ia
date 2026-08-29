@@ -1,8 +1,10 @@
 from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from auth import router as auth_router
+from routers.accounts import router as accounts_router
 from routers.payment_methods import router as pm_router
 from routers.transactions import router as transactions_router
+from routers.reports import router as reports_router
 from database import engine
 from models import Base
 
@@ -23,8 +25,10 @@ app = FastAPI(
 )
 
 app.include_router(auth_router, tags=["auth"])
-app.include_router(pm_router)
-app.include_router(transactions_router)
+app.include_router(accounts_router, tags=["accounts"])
+app.include_router(pm_router, tags=["payment_methods"])
+app.include_router(transactions_router, tags=["transactions"])
+app.include_router(reports_router, tags=["reports"])
 
 @app.get("/")
 def read_root():
