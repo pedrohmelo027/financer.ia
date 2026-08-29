@@ -1,12 +1,25 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { PlusCircle, WalletCards, Landmark, CreditCard, Building2, ChevronRight, Layers } from 'lucide-react'
+import { WalletCards, Landmark, CreditCard, Building2, Layers } from 'lucide-react'
 import { getAccounts, getPaymentMethods, createAccountAction, createPaymentMethodAction } from './actions'
 
+interface Account {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+interface PaymentMethod {
+  id: string;
+  name: string;
+  type: string;
+  account_id: string;
+}
+
 export default function AccountsPage() {
-  const [accounts, setAccounts] = useState<any[]>([])
-  const [methods, setMethods] = useState<any[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [methods, setMethods] = useState<PaymentMethod[]>([])
   const [loading, setLoading] = useState(true)
   
   const [accountError, setAccountError] = useState<string | null>(null)

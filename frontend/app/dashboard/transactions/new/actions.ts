@@ -40,24 +40,44 @@ export async function createTransactionAction(formData: FormData) {
         if (methods && methods.length > 0) {
           finalPaymentMethodId = methods[0].id
         } else {
-          // Se for usuário antigo e não tiver método de pagamento, cria um na hora
-          const createPmResponse = await fetch(`${API_URL}/payment-methods/`, {
+          // Se for usuário antigo e não tiver método de pagamento, cria uma conta e depois o método na hora
+          // 1. Tenta criar uma Conta
+          let defaultAccountId = null;
+          const createAccResponse = await fetch(`${API_URL}/accounts/`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify({
-              name: 'Conta Padrão',
-              type: 'Carteira'
+            body: JSON.stringify({ name: 'Conta Principal' })
+          });
+          if (createAccResponse.ok) {
+            const newAcc = await createAccResponse.json();
+            defaultAccountId = newAcc.id;
+          }
+
+          if (defaultAccountId) {
+            // 2. Cria o Método de Pagamento vinculado a essa conta
+            const createPmResponse = await fetch(`${API_URL}/payment-methods/`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify({
+                name: 'Carteira',
+                type: 'OTHER',
+                account_id: defaultAccountId
+              })
             })
-          })
-          if (createPmResponse.ok) {
-            const newPm = await createPmResponse.json()
-            finalPaymentMethodId = newPm.id
+            if (createPmResponse.ok) {
+              const newPm = await createPmResponse.json()
+              finalPaymentMethodId = newPm.id
+            } else {
+               finalPaymentMethodId = null
+            }
           } else {
-             // Caso não consiga criar, evita enviar string vazia para o UUID
-             finalPaymentMethodId = null
+            finalPaymentMethodId = null
           }
         }
       } else {

@@ -42,7 +42,7 @@ class PaymentMethod(Base):
 
     id = Column(Uuid(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(Uuid(as_uuid=True), ForeignKey("users.id"), nullable=False)
-    account_id = Column(Uuid(as_uuid=True), ForeignKey("accounts.id"), nullable=False)
+    account_id = Column(Uuid(as_uuid=True), ForeignKey("accounts.id"), nullable=True)
     name = Column(String, nullable=False)
     type = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -26,7 +26,7 @@ def get_report_summary(
         method.id: {
             "method_name": method.name,
             "method_type": method.type,
-            "bank": method.bank,
+            "account_name": method.account.name if method.account else "Sem Conta",
             "total_incomes": 0.0,
             "total_expenses": 0.0,
             "incomes_count": 0,
@@ -62,7 +62,7 @@ def get_report_summary(
                 method_id=pm_id,
                 method_name=stats["method_name"],
                 method_type=stats["method_type"],
-                bank=stats["bank"],
+                account_name=stats["account_name"],
                 total_incomes=stats["total_incomes"],
                 total_expenses=stats["total_expenses"],
                 incomes_count=stats["incomes_count"],

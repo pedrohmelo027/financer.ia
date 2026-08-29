@@ -20,16 +20,16 @@ class AccountResponse(AccountBase):
 
 # --- Payment Methods ---
 class PaymentMethodBase(BaseModel):
-    account_id: UUID
     name: str
     type: str
 
 class PaymentMethodCreate(PaymentMethodBase):
-    pass
+    account_id: UUID
 
 class PaymentMethodResponse(PaymentMethodBase):
     id: UUID
     user_id: UUID
+    account_id: Optional[UUID] = None
     created_at: datetime
 
     class Config:
