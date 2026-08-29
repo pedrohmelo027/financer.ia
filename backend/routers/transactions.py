@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
-from typing import List
+from sqlalchemy import extract
+from typing import List, Optional
 from database import get_db
 from models import User, Transaction, PaymentMethod
 from dependencies import get_current_user
@@ -45,10 +46,19 @@ def create_transaction(
 
 @router.get("/", response_model=List[TransactionResponse])
 def get_transactions(
+    month: Optional[int] = Query(None, description="Mês (1-12)"),
+    year: Optional[int] = Query(None, description="Ano (ex: 2026)"),
     db: Session = Depends(get_db), 
     current_user: User = Depends(get_current_user)
 ):
-    transactions = db.query(Transaction).filter(Transaction.user_id == current_user.id).all()
+    query = db.query(Transaction).filter(Transaction.user_id == current_user.id)
+    
+    if year:
+        query = query.filter(extract('year', Transaction.transaction_date) == year)
+    if month:
+        query = query.filter(extract('month', Transaction.transaction_date) == month)
+        
+    transactions = query.all()
     
     # Descriptografa a descrição antes de enviar pro cliente
     for t in transactions:
