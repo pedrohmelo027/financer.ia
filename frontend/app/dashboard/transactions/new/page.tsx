@@ -4,27 +4,39 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, PlusCircle } from 'lucide-react'
 import { createTransactionAction } from './actions'
-import { getPaymentMethods } from '../../accounts/actions'
+import { getPaymentMethods, getAccounts } from '../../accounts/actions'
+
+interface Account {
+  id: string;
+  name: string;
+}
 
 interface PaymentMethod {
   id: string;
   name: string;
   type: string;
-  bank?: string;
+  account_id: string;
 }
 
 export default function NewTransactionPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [methods, setMethods] = useState<PaymentMethod[]>([])
+  const [accounts, setAccounts] = useState<Account[]>([])
+  const [selectedAccountId, setSelectedAccountId] = useState('')
   
   const [type, setType] = useState('EXPENSE') // EXPENSE ou INCOME
 
   useEffect(() => {
-    getPaymentMethods().then(res => {
-      if (res.methods) setMethods(res.methods)
+    Promise.all([getAccounts(), getPaymentMethods()]).then(([accRes, methRes]) => {
+      if (accRes.accounts) setAccounts(accRes.accounts)
+      if (methRes.methods) setMethods(methRes.methods)
     })
   }, [])
+
+  const filteredMethods = selectedAccountId 
+    ? methods.filter(m => m.account_id === selectedAccountId)
+    : methods
 
   async function handleSubmit(formData: FormData) {
     setLoading(true)
@@ -141,19 +153,38 @@ export default function NewTransactionPage() {
             </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Forma de Pagamento</label>
-            <select
-              name="payment_method_id"
-              className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-black outline-none transition-colors bg-white text-gray-900"
-            >
-              <option value="">Selecione... (Opcional)</option>
-              {methods.map(m => (
-                <option key={m.id} value={m.id}>
-                  {m.name}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Conta</label>
+              <select
+                value={selectedAccountId}
+                onChange={(e) => setSelectedAccountId(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-black outline-none transition-colors bg-white text-gray-900"
+              >
+                <option value="">Selecione a conta... (Opcional)</option>
+                {accounts.map(acc => (
+                  <option key={acc.id} value={acc.id}>
+                    {acc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Método de Pagamento</label>
+              <select
+                name="payment_method_id"
+                disabled={!selectedAccountId && methods.length > 0}
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-black outline-none transition-colors bg-white text-gray-900 disabled:bg-gray-50 disabled:text-gray-400"
+              >
+                <option value="">Selecione o cartão/método...</option>
+                {filteredMethods.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <button
