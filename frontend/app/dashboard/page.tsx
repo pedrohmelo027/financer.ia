@@ -11,6 +11,7 @@ export default function DashboardPage() {
   const [tutorialStep, setTutorialStep] = useState(0)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [transactions, setTransactions] = useState<any[]>([])
+  const [summary, setSummary] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [successMsg, setSuccessMsg] = useState(false)
 
@@ -34,6 +35,9 @@ export default function DashboardPage() {
       if (res?.transactions) {
         setTransactions(res.transactions)
       }
+      if (res?.summary) {
+        setSummary(res.summary)
+      }
       setLoading(false)
     })
   }, [])
@@ -51,10 +55,10 @@ export default function DashboardPage() {
     }
   }
 
-  // Cálculos básicos
-  const saldo = transactions.reduce((acc, t) => acc + (t.type === 'INCOME' ? t.amount : -t.amount), 0)
-  const receitas = transactions.filter(t => t.type === 'INCOME').reduce((acc, t) => acc + t.amount, 0)
-  const despesas = transactions.filter(t => t.type === 'EXPENSE').reduce((acc, t) => acc + t.amount, 0)
+  // Cálculos básicos utilizando o resumo do backend, com fallback para cálculo manual
+  const saldo = summary ? summary.current_balance : transactions.reduce((acc, t) => acc + (t.type === 'INCOME' ? t.amount : -t.amount), 0)
+  const receitas = summary ? summary.total_incomes : transactions.filter(t => t.type === 'INCOME').reduce((acc, t) => acc + t.amount, 0)
+  const despesas = summary ? summary.total_expenses : transactions.filter(t => t.type === 'EXPENSE').reduce((acc, t) => acc + t.amount, 0)
 
   // Gráficos - Dados
   const expensesByCategory = transactions
@@ -70,22 +74,11 @@ export default function DashboardPage() {
     
   const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef'];
 
-  const transactionsByDate = [...transactions]
-    .sort((a, b) => new Date(a.transaction_date).getTime() - new Date(b.transaction_date).getTime())
-    .reduce((acc, t) => {
-      // Pega apenas o dia e mês para ficar curto no gráfico (ex: "24/05")
-      const dateObj = new Date(t.transaction_date)
-      const date = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
-      
-      if (!acc[date]) {
-        acc[date] = { name: date, Receitas: 0, Despesas: 0 };
-      }
-      if (t.type === 'INCOME') acc[date].Receitas += t.amount;
-      if (t.type === 'EXPENSE') acc[date].Despesas += t.amount;
-      return acc;
-    }, {} as Record<string, { name: string, Receitas: number, Despesas: number }>);
-    
-  const barData = Object.values(transactionsByDate);
+  const barData = summary?.monthly_summary ? summary.monthly_summary.map((m: any) => ({
+    name: m.month,
+    Receitas: m.total_incomes,
+    Despesas: m.total_expenses
+  })) : [];
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">

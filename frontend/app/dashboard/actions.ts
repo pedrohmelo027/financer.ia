@@ -13,19 +13,25 @@ export async function getDashboardData() {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
 
   try {
-    const response = await fetch(`${API_URL}/transactions/`, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
-      cache: 'no-store'
-    })
+    const [txRes, summaryRes] = await Promise.all([
+      fetch(`${API_URL}/transactions/`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store'
+      }),
+      fetch(`${API_URL}/reports/summary`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+        cache: 'no-store'
+      })
+    ])
 
-    if (!response.ok) {
-      return { error: 'Erro ao buscar transações' }
+    if (!txRes.ok || !summaryRes.ok) {
+      return { error: 'Erro ao buscar dados do dashboard' }
     }
 
-    const transactions = await response.json()
-    return { transactions }
+    const transactions = await txRes.json()
+    const summary = await summaryRes.json()
+    
+    return { transactions, summary }
   } catch {
     return { error: 'Erro de conexão' }
   }
