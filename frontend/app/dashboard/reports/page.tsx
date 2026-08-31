@@ -1,7 +1,7 @@
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { Wallet, TrendingUp, TrendingDown, CreditCard } from 'lucide-react'
-import { MonthlyLineChart } from './MonthlyLineChart'
+import { ProgressionLineChart } from './ProgressionLineChart'
 
 interface Transaction {
   id: string;
@@ -30,6 +30,11 @@ interface ReportSummary {
   }[];
   monthly_summary: {
     month: string;
+    total_incomes: number;
+    total_expenses: number;
+  }[];
+  yearly_summary: {
+    year: string;
     total_incomes: number;
     total_expenses: number;
   }[];
@@ -137,7 +142,10 @@ export default async function ReportsPage() {
         </div>
       </div>
 
-      <MonthlyLineChart data={summary.monthly_summary || []} />
+      <ProgressionLineChart 
+        monthlyData={summary.monthly_summary || []} 
+        yearlyData={summary.yearly_summary || []} 
+      />
 
       {/* Análise por Conta */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">

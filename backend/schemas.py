@@ -70,6 +70,11 @@ class MonthlySummary(BaseModel):
     total_incomes: float
     total_expenses: float
 
+class YearlySummary(BaseModel):
+    year: str
+    total_incomes: float
+    total_expenses: float
+
 class ReportSummaryResponse(BaseModel):
     total_incomes: float
     total_expenses: float
@@ -77,4 +82,5 @@ class ReportSummaryResponse(BaseModel):
     transactions_count: int
     payment_methods_summary: List[PaymentMethodSummary]
     monthly_summary: List[MonthlySummary]
+    yearly_summary: List[YearlySummary]
 

@@ -48,17 +48,23 @@ def get_report_summary(
     
     # Calculate monthly summary
     monthly_stats = {}
+    yearly_stats = {}
     
     # Aggregate transactions
     for t in transactions:
         amount = float(t.amount)
         pm_id = t.payment_method_id
         
-        # Monthly aggregation
+        # Monthly & Yearly aggregation
         # t.transaction_date is a date object
         month_str = t.transaction_date.strftime("%m/%Y")
+        year_str = t.transaction_date.strftime("%Y")
+        
         if month_str not in monthly_stats:
             monthly_stats[month_str] = {"month": month_str, "total_incomes": 0.0, "total_expenses": 0.0}
+            
+        if year_str not in yearly_stats:
+            yearly_stats[year_str] = {"year": year_str, "total_incomes": 0.0, "total_expenses": 0.0}
         
         # Security fallback: only aggregate if the payment method actually belongs to this user
         if pm_id in pm_stats:
@@ -68,11 +74,13 @@ def get_report_summary(
                 pm_stats[pm_id]["total_incomes"] += amount
                 pm_stats[pm_id]["incomes_count"] += 1
                 monthly_stats[month_str]["total_incomes"] += amount
+                yearly_stats[year_str]["total_incomes"] += amount
             elif t_type == "EXPENSE" or t_type == "DESPESA":
                 total_expenses += amount
                 pm_stats[pm_id]["total_expenses"] += amount
                 pm_stats[pm_id]["expenses_count"] += 1
                 monthly_stats[month_str]["total_expenses"] += amount
+                yearly_stats[year_str]["total_expenses"] += amount
             
     current_balance = total_incomes - total_expenses
     
@@ -96,6 +104,9 @@ def get_report_summary(
     # Sort monthly summary by date, assuming MM/YYYY format
     # Simple sort for MM/YYYY: convert to YYYY/MM for sorting
     monthly_summary.sort(key=lambda x: x["month"].split("/")[1] + x["month"].split("/")[0])
+    
+    yearly_summary = list(yearly_stats.values())
+    yearly_summary.sort(key=lambda x: x["year"])
             
     return ReportSummaryResponse(
         total_incomes=total_incomes,
@@ -103,5 +114,6 @@ def get_report_summary(
         current_balance=current_balance,
         transactions_count=len(transactions),
         payment_methods_summary=payment_methods_summary,
-        monthly_summary=monthly_summary
+        monthly_summary=monthly_summary,
+        yearly_summary=yearly_summary
     )
