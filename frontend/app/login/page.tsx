@@ -1,12 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { loginAction } from './actions'
 import Link from 'next/link'
 
 export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get('expired') === 'true') {
+        setError('Sua sessão expirou. Por favor, faça login novamente.')
+        window.history.replaceState({}, '', '/login')
+      }
+    }
+  }, [])
 
   async function handleSubmit(formData: FormData) {
     setLoading(true)

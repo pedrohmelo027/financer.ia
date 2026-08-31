@@ -8,7 +8,8 @@ load_dotenv()
 
 SECRET_KEY = os.getenv("SECRET_KEY", "chave_secreta_super_segura_para_desenvolvimento")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_HOURS = 24
+# Por padrão expira em 60 minutos, configurável via .env
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
 
 def get_password_hash(password: str) -> str:
     """
@@ -29,10 +30,10 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 def create_access_token(data: dict) -> str:
     """
-    Gera o token JWT com expiração de 24 horas.
+    Gera o token JWT com expiração configurada em minutos.
     """
     to_encode = data.copy()
-    expire = datetime.now(timezone.utc) + timedelta(hours=ACCESS_TOKEN_EXPIRE_HOURS)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

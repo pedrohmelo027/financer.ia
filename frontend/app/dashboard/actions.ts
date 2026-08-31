@@ -24,6 +24,11 @@ export async function getDashboardData() {
       })
     ])
 
+    if (txRes.status === 401 || summaryRes.status === 401) {
+      cookies().delete('access_token')
+      redirect('/login?expired=true')
+    }
+
     if (!txRes.ok || !summaryRes.ok) {
       return { error: 'Erro ao buscar dados do dashboard' }
     }

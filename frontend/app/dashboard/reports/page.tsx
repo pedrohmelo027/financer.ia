@@ -57,6 +57,11 @@ export default async function ReportsPage() {
     })
   ])
 
+  if (summaryRes.status === 401 || txRes.status === 401) {
+    cookies().delete('access_token')
+    redirect('/login?expired=true')
+  }
+
   if (!summaryRes.ok || !txRes.ok) {
     return (
       <div className="p-8 text-center text-red-600">
