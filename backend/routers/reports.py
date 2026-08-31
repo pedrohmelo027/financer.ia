@@ -46,6 +46,9 @@ def get_report_summary(
         for method in user_methods
     }
     
+    current_balance = 0.0
+    today = datetime.date.today()
+    
     # Calculate time-based summaries
     monthly_stats = {}
     weekly_stats = {}
@@ -81,6 +84,8 @@ def get_report_summary(
             t_type = t.type.upper()
             if t_type == "INCOME" or t_type == "RECEITA":
                 total_incomes += amount
+                if d <= today:
+                    current_balance += amount
                 pm_stats[pm_id]["total_incomes"] += amount
                 pm_stats[pm_id]["incomes_count"] += 1
                 monthly_stats[month_str]["total_incomes"] += amount
@@ -88,13 +93,14 @@ def get_report_summary(
                 daily_stats[day_str]["total_incomes"] += amount
             elif t_type == "EXPENSE" or t_type == "DESPESA":
                 total_expenses += amount
+                if d <= today:
+                    current_balance -= amount
                 pm_stats[pm_id]["total_expenses"] += amount
                 pm_stats[pm_id]["expenses_count"] += 1
                 monthly_stats[month_str]["total_expenses"] += amount
                 weekly_stats[week_str]["total_expenses"] += amount
                 daily_stats[day_str]["total_expenses"] += amount
-            
-    current_balance = total_incomes - total_expenses
+    
     
     # Build the final response list
     payment_methods_summary = []

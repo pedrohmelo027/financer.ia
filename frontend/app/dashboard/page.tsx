@@ -73,10 +73,18 @@ export default function DashboardPage() {
     return tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear();
   })
 
-  // Cálculos básicos utilizando o resumo do backend (que já é o total geral da conta) ou fallback
-  const saldo = summary ? summary.current_balance : transactions.reduce((acc, t) => acc + (t.type === 'INCOME' ? t.amount : -t.amount), 0)
-  const receitas = summary ? summary.total_incomes : transactions.filter(t => t.type === 'INCOME').reduce((acc, t) => acc + t.amount, 0)
-  const despesas = summary ? summary.total_expenses : transactions.filter(t => t.type === 'EXPENSE').reduce((acc, t) => acc + t.amount, 0)
+  // Receitas e Despesas do período selecionado (viewMode)
+  const receitas = filteredTransactions.filter(t => t.type === 'INCOME').reduce((acc, t) => acc + t.amount, 0)
+  const despesas = filteredTransactions.filter(t => t.type === 'EXPENSE').reduce((acc, t) => acc + t.amount, 0)
+
+  // Saldo Atual: Calcula usando todo o histórico ATÉ a data de hoje (ignora parcelas/assinaturas futuras)
+  const pastAndPresentTransactions = transactions.filter(t => {
+    const tDate = new Date(t.transaction_date + 'T00:00:00');
+    // Para o saldo atual, consideramos até o final do dia de hoje
+    const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    return tDate <= endOfToday;
+  });
+  const saldo = pastAndPresentTransactions.reduce((acc, t) => acc + (t.type === 'INCOME' ? t.amount : -t.amount), 0)
 
   // Gráficos - Dados (Gráfico de Pizza agora usa as transações filtradas pelo período selecionado)
   const expensesByCategory = filteredTransactions
@@ -370,12 +378,24 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 {loading ? (
                   <p className="text-gray-500 text-center py-4">Carregando...</p>
+                ) : filteredTransactions.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">Nenhuma transação neste período.</p>
                 ) : (
-                  transactions.map((t) => (
+                  filteredTransactions.map((t) => (
                     <div key={t.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
                       <div>
-                        <p className="font-semibold text-gray-900">{t.category}</p>
-                        <p className="text-sm text-gray-500">{t.description || "Sem descrição"} • {t.transaction_date}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-gray-900">{t.category}</p>
+                          {t.is_subscription && (
+                            <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">Assinatura</span>
+                          )}
+                          {!t.is_subscription && t.installments > 1 && (
+                            <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-medium rounded-full">
+                              Parcela {t.installment_number}/{t.installments}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-500 mt-1">{t.description || "Sem descrição"} • {t.transaction_date}</p>
                       </div>
                       <div className={`font-bold ${t.type === 'INCOME' ? 'text-green-600' : 'text-red-600'}`}>
                         {t.type === 'INCOME' ? '+' : '-'} {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(t.amount)}
