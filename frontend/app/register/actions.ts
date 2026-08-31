@@ -1,6 +1,6 @@
 'use server'
 
-import { redirect } from 'next/navigation'
+import { loginAction } from '../login/actions'
 
 export async function registerAction(formData: FormData) {
   const name = formData.get('name')
@@ -57,6 +57,10 @@ export async function registerAction(formData: FormData) {
     return { error: 'Erro de conexão com o servidor.' }
   }
 
-  // Redireciona para o login após cadastro com sucesso
-  redirect('/login?registered=true')
+  // Redireciona e faz login automático após cadastro com sucesso
+  const loginFormData = new FormData()
+  loginFormData.append('email', email as string)
+  loginFormData.append('password', password as string)
+  
+  return loginAction(loginFormData)
 }
