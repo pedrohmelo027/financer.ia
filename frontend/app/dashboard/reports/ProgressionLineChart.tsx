@@ -13,23 +13,24 @@ import {
   ResponsiveContainer
 } from 'recharts'
 
-interface MonthlySummary {
-  month: string;
+interface TimeSummary {
+  period: string;
   total_incomes: number;
   total_expenses: number;
 }
 
-interface YearlySummary {
-  year: string;
-  total_incomes: number;
-  total_expenses: number;
-}
+export function ProgressionLineChart({ 
+  dailyData, 
+  weeklyData, 
+  monthlyData 
+}: { 
+  dailyData: TimeSummary[], 
+  weeklyData: TimeSummary[], 
+  monthlyData: TimeSummary[] 
+}) {
+  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('monthly')
 
-export function ProgressionLineChart({ monthlyData, yearlyData }: { monthlyData: MonthlySummary[], yearlyData: YearlySummary[] }) {
-  const [viewMode, setViewMode] = useState<'monthly' | 'yearly'>('monthly')
-
-  const currentData = viewMode === 'monthly' ? monthlyData : yearlyData
-  const dataKey = viewMode === 'monthly' ? 'month' : 'year'
+  const currentData = viewMode === 'daily' ? dailyData : viewMode === 'weekly' ? weeklyData : monthlyData
 
   if (!monthlyData || monthlyData.length === 0) {
     return (
@@ -46,20 +47,28 @@ export function ProgressionLineChart({ monthlyData, yearlyData }: { monthlyData:
         
         <div className="flex bg-gray-100 p-1 rounded-lg">
           <button
+            onClick={() => setViewMode('daily')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              viewMode === 'daily' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            Diária
+          </button>
+          <button
+            onClick={() => setViewMode('weekly')}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              viewMode === 'weekly' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            Semanal
+          </button>
+          <button
             onClick={() => setViewMode('monthly')}
             className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
               viewMode === 'monthly' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
             }`}
           >
             Mensal
-          </button>
-          <button
-            onClick={() => setViewMode('yearly')}
-            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
-              viewMode === 'yearly' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
-            }`}
-          >
-            Anual
           </button>
         </div>
       </div>
@@ -69,7 +78,7 @@ export function ProgressionLineChart({ monthlyData, yearlyData }: { monthlyData:
           <LineChart data={currentData as any} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
             <XAxis 
-              dataKey={dataKey} 
+              dataKey="period" 
               axisLine={false}
               tickLine={false}
               tick={{ fill: '#6b7280', fontSize: 12 }}

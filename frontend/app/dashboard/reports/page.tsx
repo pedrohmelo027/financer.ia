@@ -29,12 +29,17 @@ interface ReportSummary {
     expenses_count: number;
   }[];
   monthly_summary: {
-    month: string;
+    period: string;
     total_incomes: number;
     total_expenses: number;
   }[];
-  yearly_summary: {
-    year: string;
+  weekly_summary: {
+    period: string;
+    total_incomes: number;
+    total_expenses: number;
+  }[];
+  daily_summary: {
+    period: string;
     total_incomes: number;
     total_expenses: number;
   }[];
@@ -143,8 +148,9 @@ export default async function ReportsPage() {
       </div>
 
       <ProgressionLineChart 
+        dailyData={summary.daily_summary || []}
+        weeklyData={summary.weekly_summary || []}
         monthlyData={summary.monthly_summary || []} 
-        yearlyData={summary.yearly_summary || []} 
       />
 
       {/* Análise por Conta */}

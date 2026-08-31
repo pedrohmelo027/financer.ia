@@ -14,6 +14,7 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [successMsg, setSuccessMsg] = useState(false)
+  const [viewMode, setViewMode] = useState<'daily' | 'weekly' | 'monthly'>('monthly')
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -55,13 +56,30 @@ export default function DashboardPage() {
     }
   }
 
-  // Cálculos básicos utilizando o resumo do backend, com fallback para cálculo manual
+  // Filtra as transações baseadas no viewMode para o gráfico de pizza
+  const now = new Date();
+  const filteredTransactions = transactions.filter(t => {
+    const tDate = new Date(t.transaction_date + 'T00:00:00'); // Trata timezone para não pular de dia
+    if (viewMode === 'daily') {
+      return tDate.getDate() === now.getDate() && tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear();
+    }
+    if (viewMode === 'weekly') {
+      // Simplificação: últimos 7 dias
+      const diffTime = Math.abs(now.getTime() - tDate.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+      return diffDays <= 7;
+    }
+    // monthly: current month
+    return tDate.getMonth() === now.getMonth() && tDate.getFullYear() === now.getFullYear();
+  })
+
+  // Cálculos básicos utilizando o resumo do backend (que já é o total geral da conta) ou fallback
   const saldo = summary ? summary.current_balance : transactions.reduce((acc, t) => acc + (t.type === 'INCOME' ? t.amount : -t.amount), 0)
   const receitas = summary ? summary.total_incomes : transactions.filter(t => t.type === 'INCOME').reduce((acc, t) => acc + t.amount, 0)
   const despesas = summary ? summary.total_expenses : transactions.filter(t => t.type === 'EXPENSE').reduce((acc, t) => acc + t.amount, 0)
 
-  // Gráficos - Dados
-  const expensesByCategory = transactions
+  // Gráficos - Dados (Gráfico de Pizza agora usa as transações filtradas pelo período selecionado)
+  const expensesByCategory = filteredTransactions
     .filter(t => t.type === 'EXPENSE')
     .reduce((acc, t) => {
       acc[t.category] = (acc[t.category] || 0) + t.amount;
@@ -74,8 +92,14 @@ export default function DashboardPage() {
     
   const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#84cc16', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#8b5cf6', '#d946ef'];
 
-  const barData = summary?.monthly_summary ? summary.monthly_summary.map((m: any) => ({
-    name: m.month,
+  const rawBarData = viewMode === 'daily' 
+    ? summary?.daily_summary 
+    : viewMode === 'weekly' 
+      ? summary?.weekly_summary 
+      : summary?.monthly_summary;
+
+  const barData = rawBarData ? rawBarData.map((m: any) => ({
+    name: m.period,
     Receitas: m.total_incomes,
     Despesas: m.total_expenses
   })) : [];
@@ -230,11 +254,41 @@ export default function DashboardPage() {
             </div>
           ) : !loading ? (
             <>
-              {/* Gráficos */}
-              <div className="grid md:grid-cols-2 gap-6 mt-8">
-                {/* Despesas por Categoria */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-                  <h3 className="text-lg font-bold text-gray-900 mb-6">Despesas por Categoria</h3>
+              {/* Filtro de Tempo e Gráficos */}
+              <div className="mt-8">
+                <div className="flex justify-end mb-4">
+                  <div className="flex bg-gray-100 p-1 rounded-lg">
+                    <button
+                      onClick={() => setViewMode('daily')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                        viewMode === 'daily' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+                      }`}
+                    >
+                      Hoje
+                    </button>
+                    <button
+                      onClick={() => setViewMode('weekly')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                        viewMode === 'weekly' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+                      }`}
+                    >
+                      Últimos 7 dias
+                    </button>
+                    <button
+                      onClick={() => setViewMode('monthly')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                        viewMode === 'monthly' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-900'
+                      }`}
+                    >
+                      Este Mês
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Despesas por Categoria */}
+                  <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+                    <h3 className="text-lg font-bold text-gray-900 mb-6">Despesas por Categoria ({viewMode === 'daily' ? 'Hoje' : viewMode === 'weekly' ? '7 dias' : 'Este Mês'})</h3>
                   {pieData.length > 0 ? (
                     <div className="h-64 w-full">
                       <ResponsiveContainer width="100%" height="100%">
@@ -296,6 +350,7 @@ export default function DashboardPage() {
                   ) : (
                     <div className="h-64 flex items-center justify-center text-gray-500">Sem dados para exibir</div>
                   )}
+                </div>
                 </div>
               </div>
 

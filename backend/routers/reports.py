@@ -46,25 +46,35 @@ def get_report_summary(
         for method in user_methods
     }
     
-    # Calculate monthly summary
+    # Calculate time-based summaries
     monthly_stats = {}
-    yearly_stats = {}
+    weekly_stats = {}
+    daily_stats = {}
     
     # Aggregate transactions
     for t in transactions:
         amount = float(t.amount)
         pm_id = t.payment_method_id
         
-        # Monthly & Yearly aggregation
-        # t.transaction_date is a date object
-        month_str = t.transaction_date.strftime("%m/%Y")
-        year_str = t.transaction_date.strftime("%Y")
+        d = t.transaction_date
+        # Monthly aggregation
+        month_str = d.strftime("%m/%Y")
+        
+        # Weekly aggregation: "Semana X - MM/YYYY" (where X is the week of the month, roughly 1-5)
+        week_of_month = (d.day - 1) // 7 + 1
+        week_str = f"Semana {week_of_month} - {month_str}"
+        
+        # Daily aggregation
+        day_str = d.strftime("%d/%m/%Y")
         
         if month_str not in monthly_stats:
-            monthly_stats[month_str] = {"month": month_str, "total_incomes": 0.0, "total_expenses": 0.0}
+            monthly_stats[month_str] = {"period": month_str, "total_incomes": 0.0, "total_expenses": 0.0}
             
-        if year_str not in yearly_stats:
-            yearly_stats[year_str] = {"year": year_str, "total_incomes": 0.0, "total_expenses": 0.0}
+        if week_str not in weekly_stats:
+            weekly_stats[week_str] = {"period": week_str, "total_incomes": 0.0, "total_expenses": 0.0}
+            
+        if day_str not in daily_stats:
+            daily_stats[day_str] = {"period": day_str, "total_incomes": 0.0, "total_expenses": 0.0}
         
         # Security fallback: only aggregate if the payment method actually belongs to this user
         if pm_id in pm_stats:
@@ -74,13 +84,15 @@ def get_report_summary(
                 pm_stats[pm_id]["total_incomes"] += amount
                 pm_stats[pm_id]["incomes_count"] += 1
                 monthly_stats[month_str]["total_incomes"] += amount
-                yearly_stats[year_str]["total_incomes"] += amount
+                weekly_stats[week_str]["total_incomes"] += amount
+                daily_stats[day_str]["total_incomes"] += amount
             elif t_type == "EXPENSE" or t_type == "DESPESA":
                 total_expenses += amount
                 pm_stats[pm_id]["total_expenses"] += amount
                 pm_stats[pm_id]["expenses_count"] += 1
                 monthly_stats[month_str]["total_expenses"] += amount
-                yearly_stats[year_str]["total_expenses"] += amount
+                weekly_stats[week_str]["total_expenses"] += amount
+                daily_stats[day_str]["total_expenses"] += amount
             
     current_balance = total_incomes - total_expenses
     
@@ -101,12 +113,13 @@ def get_report_summary(
         )
         
     monthly_summary = list(monthly_stats.values())
-    # Sort monthly summary by date, assuming MM/YYYY format
-    # Simple sort for MM/YYYY: convert to YYYY/MM for sorting
-    monthly_summary.sort(key=lambda x: x["month"].split("/")[1] + x["month"].split("/")[0])
+    monthly_summary.sort(key=lambda x: x["period"].split("/")[1] + x["period"].split("/")[0])
     
-    yearly_summary = list(yearly_stats.values())
-    yearly_summary.sort(key=lambda x: x["year"])
+    weekly_summary = list(weekly_stats.values())
+    weekly_summary.sort(key=lambda x: x["period"][-4:] + x["period"][-7:-5] + x["period"].split(" ")[1])
+    
+    daily_summary = list(daily_stats.values())
+    daily_summary.sort(key=lambda x: x["period"].split("/")[2] + x["period"].split("/")[1] + x["period"].split("/")[0])
             
     return ReportSummaryResponse(
         total_incomes=total_incomes,
@@ -115,5 +128,6 @@ def get_report_summary(
         transactions_count=len(transactions),
         payment_methods_summary=payment_methods_summary,
         monthly_summary=monthly_summary,
-        yearly_summary=yearly_summary
+        weekly_summary=weekly_summary,
+        daily_summary=daily_summary
     )
